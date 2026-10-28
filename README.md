@@ -119,6 +119,12 @@ The underlying authorization result is verified (see the case's VERIFIED.md).
 The one-command container wrapper (verify.sh) is the convenience path and should
 be run on a Docker host in an isolated lab; see the case's safety notes.
 
+## Test your own server
+
+Point the same cross-tenant test at an MCP server you run: copy
+`templates/byos_adapter.py`, fill in four TODOs, and run it. See
+[docs/BRING-YOUR-OWN-SERVER.md](docs/BRING-YOUR-OWN-SERVER.md).
+
 ## Contributing a case
 
 New MCP authorization CVE? That's a pull request. See

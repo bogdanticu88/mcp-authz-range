@@ -118,22 +118,24 @@ def _load_adapter_sessions(path: str):
 
 
 def cmd_run(args) -> int:
-    # Validate the case name against discovered cases unless running the mock.
     cases = _discover_cases()
-    if not args.mock and args.case not in cases:
+    # An explicit --adapter file is the "bring your own server" path: run it
+    # against the test contract without needing a registered case.
+    byo = bool(args.adapter) and os.path.isfile(args.adapter)
+    if not args.mock and not byo and args.case not in cases:
         known = ", ".join(cases) or "(none)"
         print(f"Unknown case '{args.case}'. Known cases: {known}", file=sys.stderr)
-        print("(use --mock to run the in-process demo without a real case)", file=sys.stderr)
+        print("(use --mock for the demo, or --adapter PATH to test your own server)", file=sys.stderr)
         return EXIT_CRASH
 
     leak = args.version == "vulnerable"
     if args.mock:
         a, b = _mock_sessions(leak)
     else:
-        # Default the adapter to the case's own adapter.py when not given explicitly.
+        # --adapter wins; otherwise fall back to the named case's own adapter.py.
         adapter_path = args.adapter or os.path.join(cases[args.case]["dir"], "adapter.py")
         if not os.path.isfile(adapter_path):
-            print(f"Case '{args.case}' has no adapter at {adapter_path}.", file=sys.stderr)
+            print(f"No adapter found at {adapter_path}.", file=sys.stderr)
             return EXIT_CRASH
         a, b = _load_adapter_sessions(adapter_path)
 
