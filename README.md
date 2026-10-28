@@ -74,24 +74,33 @@ Honest scope of the current state:
   build and `PASS` on the fixed one. See each case's `REPRODUCTION.md` for how
   far that has actually been taken.
 
-## Install
+## Quick start (no install, no Docker, no network)
 
-From a clone of this repo:
-
-```
-make install         # editable install, puts `range` on your PATH
-# or: pip install -e .
-```
-
-## Quick start (no Docker, no network)
-
-See the FAIL/PASS contrast in-process, no target server required:
+The harness is pure standard library, so you do not need to install anything.
+From a fresh clone, with Python 3.10+:
 
 ```
-make demo
-# or: range run mcphub-idor-CVE-2026-79750 --version vulnerable --mock   # FAIL
-#     range run mcphub-idor-CVE-2026-79750 --version fixed      --mock   # PASS
+make demo        # in-process FAIL/PASS demo
+make test        # the full test suite
 ```
+
+That is the whole first look. `make demo` runs the vulnerable and fixed cases
+in-process and prints FAIL then PASS. Nothing is downloaded, nothing is exposed.
+
+## Optional: the `range` command
+
+If you want `range` as a command instead of `make`/`python3`:
+
+```
+make install     # editable install (pip install -e .)
+range list
+range run mcphub-idor-CVE-2026-79750 --version vulnerable --mock
+```
+
+If your shell says `range: command not found` after installing, pip put it in
+your user bin dir; add it to PATH (`export PATH="$HOME/.local/bin:$PATH"`) or
+use `pipx install .`. You never need the command: `python3 harness/cli.py ...`
+and the `make` targets work without it.
 
 ## Run against a real target
 

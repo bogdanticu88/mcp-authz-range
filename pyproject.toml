@@ -5,7 +5,7 @@ description = "A local, offline range of real MCP authorization CVEs. Your autho
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-dependencies = ["pyyaml"]
+dependencies = []  # harness is pure standard library: nothing to install
 
 [project.optional-dependencies]
 dev = ["pytest"]
