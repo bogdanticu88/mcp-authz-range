@@ -76,11 +76,24 @@ Honest scope of the current state:
 
 ## Install
 
+From a clone of this repo:
+
 ```
-pip install .        # or: uv run range ...
+make install         # editable install, puts `range` on your PATH
+# or: pip install -e .
 ```
 
-## Run
+## Quick start (no Docker, no network)
+
+See the FAIL/PASS contrast in-process, no target server required:
+
+```
+make demo
+# or: range run mcphub-idor-CVE-2026-79750 --version vulnerable --mock   # FAIL
+#     range run mcphub-idor-CVE-2026-79750 --version fixed      --mock   # PASS
+```
+
+## Run against a real target
 
 ```
 range list                                    # show cases
@@ -88,6 +101,23 @@ range run <case> --version vulnerable         # expect FAIL
 range run <case> --version fixed              # expect PASS
 range run <case> --json out.json              # machine-readable evidence
 ```
+
+`range` finds cases under ./cases when run from a clone; set RANGE_CASES_DIR to
+point it elsewhere.
+
+## Reproduce a real CVE end to end (needs Docker)
+
+Each case ships a one-command verifier that builds the vulnerable and fixed
+versions, reproduces the bug, and tears everything down:
+
+```
+make verify-mcphub
+# expect: VERDICT VULN-1.0.29 FAIL, VERDICT FIXED-1.0.30 PASS
+```
+
+The underlying authorization result is verified (see the case's VERIFIED.md).
+The one-command container wrapper (verify.sh) is the convenience path and should
+be run on a Docker host in an isolated lab; see the case's safety notes.
 
 ## Contributing a case
 

@@ -17,8 +17,24 @@ import sys
 from verdict import Verdict, evaluate, run_exit_code, EXIT_CRASH
 from t1_cross_tenant import run_t1, TenantSession
 
-# cases/ lives next to the harness/ directory.
-CASES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cases")
+def _find_cases_dir() -> str:
+    """Locate the cases/ directory, in priority order:
+      1. $RANGE_CASES_DIR if set (explicit override),
+      2. ./cases under the current working directory (running from a clone),
+      3. cases/ next to the harness/ package (the repo layout / editable install).
+    This keeps `range` working both from a git clone and after an install,
+    where the harness modules may live apart from the cases tree.
+    """
+    env = os.environ.get("RANGE_CASES_DIR")
+    if env and os.path.isdir(env):
+        return env
+    cwd_cases = os.path.join(os.getcwd(), "cases")
+    if os.path.isdir(cwd_cases):
+        return cwd_cases
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cases")
+
+
+CASES_DIR = _find_cases_dir()
 
 
 def _discover_cases() -> dict[str, dict]:

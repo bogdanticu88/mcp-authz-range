@@ -15,5 +15,5 @@ range = "cli:main"
 
 [tool.setuptools]
 packages = []
-py-modules = ["cli", "verdict", "t1_cross_tenant"]
+py-modules = ["cli", "verdict", "t1_cross_tenant", "t2_t3", "fixture", "fixture_control", "http_adapter"]
 package-dir = { "" = "harness" }
