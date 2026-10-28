@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A local, offline range of real MCP authorization CVEs. Your authorization tests pass; the agent's path doesn't."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "AGPL-3.0-or-later" }
+license = { text = "MIT" }
 dependencies = ["pyyaml"]
 
 [project.optional-dependencies]

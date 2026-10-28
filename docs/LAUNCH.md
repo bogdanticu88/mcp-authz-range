@@ -46,7 +46,7 @@ for why prompt-level red teaming isn't authorization testing.
 >
 > So I rebuilt a handful of these as a local range. Each one is the real CVE,
 > pinned vulnerable and fixed. One command shows FAIL on the old version and
-> PASS on the patch. Offline, no account, AGPL.
+> PASS on the patch. Offline, no account, MIT-licensed.
 >
 > [GIF]
 >

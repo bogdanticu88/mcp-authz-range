@@ -100,6 +100,6 @@ Only servers you host yourself, in your own tenants. See
 
 ## License
 
-AGPL-3.0. The engine underneath is [Ordeal]; this range is its public front door.
+MIT. The engine underneath is [Ordeal]; this range is its public front door.
 
 [Ordeal]: https://github.com/bogdanticu88
