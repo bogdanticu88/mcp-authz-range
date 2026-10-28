@@ -3,7 +3,9 @@
 **Your authorization tests pass. The agent's path doesn't.**
 
 A range of real, published MCP authorization bugs, each one runnable on your
-laptop. No account. No signup. No telemetry. Fully offline.
+laptop. No account, no signup, no telemetry. It runs with no network once set
+up; note that the first build does download dependencies and the target
+software, so "offline" means at run time, not at install time.
 
 Every case is a real CVE pinned at its vulnerable and its fixed version. The
 same probe runs against both, and the harness prints `FAIL` on the vulnerable
