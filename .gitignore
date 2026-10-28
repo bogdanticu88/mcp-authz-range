@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Build / local MCPHub checkouts (never commit the target software)
+mcphub-build/
+mcphub-fixed/
+dist/
+build/
+
+# Archives and scratch
+*.tar.gz
+*.log
+.extract/
+
+# OS
+.DS_Store

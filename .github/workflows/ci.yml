@@ -1,0 +1,23 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      # Full suite: verdict engine, blind-evaluator guard, HTTP integration,
+      # mutation testing, T2/T3. All offline, zero external services.
+      - run: python -m pytest harness -q
+      # The demo contract, enforced in CI: vulnerable must FAIL, fixed must PASS.
+      - name: vulnerable must FAIL
+        run: |
+          cd harness
+          python cli.py run mcphub-idor-CVE-2026-79750 --version vulnerable --mock && exit 1 || test $? -eq 1
+      - name: fixed must PASS
+        run: |
+          cd harness
+          python cli.py run mcphub-idor-CVE-2026-79750 --version fixed --mock

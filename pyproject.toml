@@ -1,0 +1,19 @@
+[project]
+name = "mcp-range"
+version = "0.1.0"
+description = "A local, offline range of real MCP authorization CVEs. Your authorization tests pass; the agent's path doesn't."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = ["pyyaml"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+range = "cli:main"
+
+[tool.setuptools]
+packages = []
+py-modules = ["cli", "verdict", "t1_cross_tenant"]
+package-dir = { "" = "harness" }
