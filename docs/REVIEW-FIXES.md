@@ -53,3 +53,38 @@ each with a regression test in `harness/regression_test.py` or `harness/cli_test
   case should add an independent effect observer where possible.
 - The MCPHub victim server is admin-owned (SSRF-guard reason). A non-admin-owned
   victim is the pre-publication refinement.
+
+# Review fixes round 2 (2026-10-29)
+
+External review of commit 6e750c0 found four more false-PASS / reproducibility
+gaps. All fixed with regression tests.
+
+## High (make PASS harder to earn)
+
+1. **T1 accepted a malformed response as PASS.** After a good control, any
+   nonempty response without the canary counted as clean, including an HTML
+   error page. Now a CLEAN verdict requires a recognizable (JSON) tool response;
+   anything else is reach=UNKNOWN -> ERROR. A leak in any format still FAILs.
+   Test: `test_t1_malformed_probe_response_is_not_pass`.
+
+2. **The privesc repro could PASS on an unreadable final read.** `read_registry`
+   returned None on parse failure and the caller treated that as "value absent"
+   -> PASS. Now a clean verdict requires positively observing a known final
+   state (the admin's value still standing); an unreadable or unexpected state is
+   ERROR. Fixed in the case's `repro.py`.
+
+3. **T2/T3 trusted response fields (`committed`, `count`, `decision`).** A server
+   could commit a write (or apply a replay) and still report "denied", scoring a
+   false PASS. Both now decide from an INDEPENDENT read of the effect state
+   (committed-write count, apply count), not the action's own response. The
+   fixture gained observable state and "lying" modes (commit-but-report-denied)
+   to prove it. Tests: `test_t2_lying_server_still_fails`,
+   `test_t3_lying_server_still_fails`, `test_t2_unreadable_count_is_error`.
+
+## Reproducibility / distribution
+
+4. Docker builds now pin the git context to immutable commit SHAs, not movable
+   tags (matching the "verified by commit" claim). `t4_privilege` is added to the
+   packaged modules. A separate `verify-cases` workflow (manual / weekly) rebuilds
+   the real cases on a Docker runner, since the push-triggered CI only runs the
+   (Docker-free) test suite.

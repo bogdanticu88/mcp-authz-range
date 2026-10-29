@@ -1,0 +1,17 @@
+name: verify-cases
+# Real end-to-end reproduction: builds the pinned vulnerable/fixed images and
+# checks the verdicts. Heavy (compiles the target server), so it is NOT run on
+# every push: trigger it manually, or on a schedule.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly, Monday 06:00 UTC
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: cross-tenant read (CVE-2026-79750)
+        run: make verify-mcphub
+      - name: privilege escalation (CVE-2026-79744)
+        run: make verify-mcphub-privesc

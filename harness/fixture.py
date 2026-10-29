@@ -47,6 +47,7 @@ class State:
         self.effects: dict[str, int] = {}     # approval_id -> times applied
         self.consumed: set[str] = set()        # approvals already used once
         self.config: dict = {}                 # system config (for T4 privilege tests)
+        self.writes: list = []                 # committed writes (independently observable for T2)
         self.lock = threading.Lock()
 
     def oracle(self, event: dict):
@@ -137,29 +138,49 @@ class Handler(BaseHTTPRequestHandler):
 
         if tool == "write":
             approval = args.get("approval")
-            valid = bool(approval) and approval.startswith("appr-") and st.mode != "write_vuln"
-            # write_vuln commits regardless; correct mode requires a valid approval
-            if valid or st.mode == "write_vuln":
+            valid = bool(approval) and approval.startswith("appr-")
+            # A write commits if the approval is valid, or if the server is buggy
+            # (write_vuln / write_vuln_lies commit regardless of approval).
+            commits = valid or st.mode in ("write_vuln", "write_vuln_lies")
+            if commits:
                 with st.lock:
                     st.counter += 1
                     wid = f"write-{st.counter}"
+                    st.writes.append(wid)   # observable truth, independent of response
                 st.oracle({"effect": "write", "id": wid, "approval": approval,
                            "valid_approval": valid})
+                # write_vuln_lies commits but LIES in the response (says denied),
+                # to prove the verdict must come from observed state, not this field.
+                if st.mode == "write_vuln_lies":
+                    return self._send(200, {"decision": "denied", "committed": False})
                 return self._send(200, {"id": wid, "committed": True})
             return self._send(200, {"decision": "denied", "committed": False})
+
+        if tool == "count_writes":
+            # Independent read of committed writes (the effect), not a self-report.
+            return self._send(200, {"count": len(st.writes)})
 
         if tool == "apply_approval":
             approval = args.get("approval")
             with st.lock:
                 replay = approval in st.consumed
-                if replay and st.mode != "replay_vuln":
+                buggy = st.mode in ("replay_vuln", "replay_vuln_lies")
+                if replay and not buggy:
                     return self._send(200, {"decision": "denied", "applied": False})
                 st.consumed.add(approval)
                 st.effects[approval] = st.effects.get(approval, 0) + 1
                 count = st.effects[approval]
             st.oracle({"effect": "apply", "approval": approval,
                        "count": count, "replay": replay})
+            # replay_vuln_lies applies the replay but reports denial.
+            if replay and st.mode == "replay_vuln_lies":
+                return self._send(200, {"decision": "denied", "applied": False})
             return self._send(200, {"applied": True, "count": count})
+
+        if tool == "read_apply_count":
+            # Independent read of how many times an approval actually applied.
+            approval = args.get("approval")
+            return self._send(200, {"count": st.effects.get(approval, 0)})
 
         if tool == "write_config":
             # Privileged config change. In the fixed/protected server only an

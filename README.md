@@ -79,9 +79,12 @@ Report `FAIL`s and `ERROR`s separately: only a `FAIL` is a found vulnerability.
 - Both cases are reproduced end to end: built from pinned source commits, the
   control fires, and the probe gives `FAIL` on the vulnerable build and `PASS`
   on the fixed one. See each case's `VERIFIED.md`.
-- The verdict engine has 42 tests, including regressions for known false-`PASS`
+- The verdict engine has 45 tests, including regressions for known false-`PASS`
   paths (empty evidence, foreign-run evidence, malformed responses). That is
   "tested against selected cases", not "proven correct".
+- The write and replay contracts (T2/T3) decide from an independent read
+  of committed state, not the server's own success/denied field, so a
+  server that commits yet reports "denied" is still caught.
 - A mutation test mutates the fixture's authorization check six ways and
   confirms no mutant that actually leaks is ever reported `PASS`. Evidence the
   detector resists those faults, not proof it cannot be fooled.

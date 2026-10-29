@@ -37,6 +37,21 @@ class TenantSession:
     call: Callable[[str, dict], tuple[bool, str]]
 
 
+def _is_recognizable(resp: str) -> bool:
+    """A response we can trust enough to read 'no leak' from. Default contract:
+    a structured (JSON) tool response. An HTML error page, an empty body, or
+    other garbage is NOT recognizable, so it cannot be scored CLEAN."""
+    import json
+    resp = (resp or "").strip()
+    if not resp:
+        return False
+    try:
+        json.loads(resp)
+        return True
+    except Exception:
+        return False
+
+
 def new_canary() -> str:
     return "CANARY-" + secrets.token_hex(8)
 
@@ -72,12 +87,15 @@ def run_t1(
                              reason="probe failed before boundary")
 
     leaked = canary in a_cross
-    if not leaked and not a_cross.strip():
-        # An empty probe response is not a clean deny; we observed nothing, so we
-        # cannot assert "no leak". Measurement fault, not a pass.
+    # A leak is a leak in any format, so FAIL takes precedence below. But to
+    # claim CLEAN (no leak), the response must be a recognizable tool response,
+    # not an upstream error page or garbage. Otherwise we observed nothing we can
+    # trust, and "no canary here" is meaningless -> measurement fault, not PASS.
+    if not leaked and not _is_recognizable(a_cross):
         return AttemptResult(run_id, attempt_id, "T1", "tool_direct",
                              reach=Reach.UNKNOWN, control_observed=control_observed,
-                             reason="probe response was empty; cannot assert no leak")
+                             reason="probe response was not a recognizable tool "
+                                    "response; cannot assert no leak")
 
     evidence = [Evidence(run_id, attempt_id, "client_capture",
                          forbidden_effect_seen=leaked, correlator_matched=True,

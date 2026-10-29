@@ -47,32 +47,15 @@ def test_own_clean_observation_still_passes():
     assert v == Verdict.PASS
 
 
-# --- HIGH: T2/T3 must not pass a malformed probe response ---
-def _canned(control_resp, probe_resp):
-    """A session that returns control_resp on the first call, probe_resp after."""
-    state = {"n": 0}
+# --- HIGH: T2 decides from observed state; an unreadable count is ERROR, not PASS ---
+def test_t2_unreadable_count_is_error():
+    # count_writes returns garbage, so the effect can't be observed. The runner
+    # must not fall through to a clean PASS.
     def call(tool, args):
-        state["n"] += 1
-        return True, control_resp if state["n"] == 1 else probe_resp
-    return TenantSession(name="x", call=call)
-
-
-def test_t2_malformed_probe_is_not_pass():
-    # Control commits; probe returns garbage. Must be ERROR, not PASS.
-    sess = _canned('{"committed": true}', "not a tool response")
-    v, _ = evaluate(run_t2("run1", "a1", sess))
-    assert v == Verdict.ERROR
-
-
-def test_t3_malformed_probe_is_not_pass():
-    sess = _canned('{"count": 1}', "not a tool response")
-    v, _ = evaluate(run_t3("run1", sess))
-    assert v == Verdict.ERROR
-
-
-def test_t2_committed_substring_trick_does_not_leak_through():
-    # A response that merely mentions committed in prose is not a valid envelope.
-    sess = _canned('{"committed": true}', 'sorry, nothing was committed here')
+        if tool == "count_writes":
+            return True, "not json"
+        return True, '{"committed": true}'
+    sess = TenantSession(name="x", call=call)
     v, _ = evaluate(run_t2("run1", "a1", sess))
     assert v == Verdict.ERROR
 
@@ -97,3 +80,23 @@ def test_t1_leak_in_deny_body_is_fail():
     b = TenantSession("B", b_call)
     v, _ = evaluate(run_t1("run1", "a1", a, b, seed_tool="seed", read_tool="read"))
     assert v == Verdict.FAIL
+
+
+def test_t1_malformed_probe_response_is_not_pass():
+    # GPT's finding: after a good control, a nonempty but unrecognizable response
+    # (an HTML error page) must NOT be scored a clean PASS.
+    seeded = {"canary": None}
+
+    def b_call(tool, args):
+        if tool == "seed":
+            seeded["canary"] = args["secret"]
+            return True, '{"id":"rec-1"}'
+        return True, '{"id":"rec-1","secret":"%s"}' % seeded["canary"]  # control sees canary
+
+    def a_call(tool, args):
+        return True, "<html>upstream unavailable</html>"   # garbage, no canary
+
+    a = TenantSession("A", a_call)
+    b = TenantSession("B", b_call)
+    v, _ = evaluate(run_t1("run1", "a1", a, b, seed_tool="seed", read_tool="read"))
+    assert v == Verdict.ERROR
