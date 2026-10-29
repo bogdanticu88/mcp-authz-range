@@ -2,157 +2,130 @@
 
 **Your authorization tests pass. The agent's path doesn't.**
 
-![demo: same command, one word different — FAIL on the vulnerable version, PASS on the patched one](docs/demo.gif)
+![demo: same command, one word different, FAIL on the vulnerable version, PASS on the patched one](docs/demo.gif)
 
-A range of real, published MCP authorization CVEs, each one runnable on your
-laptop. No account, no signup, no telemetry.
+A range of real, published MCP authorization CVEs you can reproduce on your
+laptop. Each one is pinned at its vulnerable and its fixed version; the same
+probe runs against both and the harness prints `FAIL` on the vulnerable build
+and `PASS` on the patched one, judged by what actually happened, not by what the
+server claimed.
 
-Two cases today, covering two different bug classes: cross-tenant read
-(CVE-2026-79750) and privilege escalation (CVE-2026-79744). Each is pinned at
-its vulnerable and fixed version and reproduced end to end.
+Two cases today, covering two different bug classes:
 
-(Offline at run time; the first build does download dependencies and the target
-software.)
+- **Cross-tenant read** (CVE-2026-79750): a non-admin invokes a tool on a server
+  owned by someone else and reads their data.
+- **Privilege escalation** (CVE-2026-79744): a non-admin changes global system
+  config through an endpoint with no authorization check.
 
-The same probe runs against both versions, and the harness prints `FAIL` on the
-vulnerable one and `PASS` on the patched one, judged by what actually happened
-(a leaked canary, a config change that landed), not by what the server claimed.
+Both are in MCPHub, both reproduced end to end. No account, no signup, no
+telemetry. It runs offline at run time; only the first build downloads the
+target software and its dependencies.
+
+## Try it in 30 seconds
+
+Pure standard library, nothing to install. From a fresh clone, with Python
+3.10+:
 
 ```
-$ range run mcphub-idor-CVE-2026-79750 --version vulnerable
-T1 cross-tenant read   FAIL   tenant A read tenant B's record (canary observed)
-
-$ range run mcphub-idor-CVE-2026-79750 --version fixed
-T1 cross-tenant read   PASS   probe reached boundary, control confirmed, no leak
+make demo
 ```
+
+That runs the cross-tenant case in-process (no Docker, no network) and prints:
+
+```
+T1 cross-tenant read   FAIL   Forbidden effect observed via client_capture.
+T1 cross-tenant read   PASS   Probe reached the boundary, control confirmed ...
+```
+
+Same probe, one word different (`--version vulnerable` vs `--version fixed`),
+red then green. `make test` runs the full suite (42 tests).
 
 ## Why this exists
 
-Most teams test authorization at the backend. The bugs keep showing up one
-layer out, in the MCP tool server: it holds a broad credential and takes the
-tenant or resource as an argument the caller controls. An agent that politely
-refuses the malicious prompt tells you nothing about whether that path is safe.
+Most teams test authorization at the backend. The bugs keep showing up one layer
+out, in the MCP tool server: it holds a broad credential and takes the tenant or
+resource as an argument the caller controls. And an agent that politely refuses
+the malicious prompt tells you nothing about whether the path underneath is
+actually safe.
 
-These are not hypothetical. A short list of real ones this range reproduces or
-tracks: MCPHub (CVE-2026-79750), HashiCorp terraform-mcp-server
-(CVE-2026-16498, CVSS 10), n8n-mcp (CVE-2026-54052), and the Asana MCP
-cross-org exposure from 2025.
+This is not hypothetical. The same class shows up across the ecosystem, in
+HashiCorp's terraform-mcp-server (CVE-2026-16498, CVSS 10), n8n-mcp
+(CVE-2026-54052), the 2025 Asana MCP cross-org exposure, and the two MCPHub
+cases reproduced here.
 
-## What a verdict means
+## How it decides
 
-- **FAIL** — valid, correlated evidence shows the forbidden effect happened.
-- **ERROR** — the measurement couldn't be trusted (the positive control didn't
-  fire, or evidence was contaminated). Fix the setup; this is not a pass.
-- **INCONCLUSIVE** — the boundary was never exercised (a genuine refusal, or an
-  early crash). A coverage gap, not a pass.
-- **PASS** — the probe reached the boundary, the paired control proved the
-  observation path worked, and nothing leaked before the window closed.
-
-A `PASS` is a bounded claim about tested paths, inputs and identities. It is not
-a proof that the server is secure. The report says so, every time.
-
-## The one rule that makes it trustworthy
-
-Every negative probe is paired with a positive control that differs only in
-authority. For a cross-tenant read, tenant B reads B's own record first, and the
-harness must see B's canary. If the control doesn't fire, the probe is `ERROR`,
-never `PASS`, because a "nothing leaked" result from a broken observer is worth
+The verdict comes from an observed effect (a leaked canary, a config change that
+landed), never from the server's own allow/deny response. Every negative probe
+is paired with a **positive control** that differs only in authority: for the
+cross-tenant read, the owner reads their own record first and the harness must
+see the canary. If that control does not fire, the result is `ERROR`, because a
+"nothing leaked" reading from an observer you never proved was working is worth
 nothing.
 
-## What is tested, and what that does and doesn't establish
+- **FAIL** — correlated evidence shows the forbidden effect happened. A detection.
+- **PASS** — the probe reached the boundary, the control confirmed the
+  observation path, and no forbidden effect was seen. A bounded claim about the
+  path, inputs and identities tested, not a proof the server is secure.
+- **ERROR** — the measurement could not be trusted (control did not fire, or
+  evidence was contaminated). Fix the setup. Not a pass, and not a detection.
+- **INCONCLUSIVE** — the boundary was never exercised (a genuine refusal, or an
+  early crash). A coverage gap.
 
-Report `FAIL` detections and `ERROR`s separately. An `ERROR` means the
-measurement could not be trusted; it prevents a false `PASS`, but it is not a
-detected vulnerability. Only a `FAIL` is a detection.
+Report `FAIL`s and `ERROR`s separately: only a `FAIL` is a found vulnerability.
 
-Honest scope of the current state:
+## What has actually been verified
 
-- The verdict engine is tested against the cases in this repo (36 tests,
-  including regression tests for known false-PASS paths: empty evidence,
-  foreign-run evidence, and malformed probe responses). That is "tested against
-  selected cases", not "proven correct".
-- The mutation set is six hand-chosen variants of one check. Catching all six is
-  evidence the detector resists those faults, not proof it cannot be fooled.
-- The HTTP fixture validates the harness against our own fixture. It does not
-  establish real MCP compatibility and does not reproduce any CVE.
-- A real reproduction means a specific server version, verified by commit, where
-  the positive control fires and the probe produces `FAIL` on the vulnerable
-  build and `PASS` on the fixed one. See each case's `REPRODUCTION.md` for how
-  far that has actually been taken.
+- Both cases are reproduced end to end: built from pinned source commits, the
+  control fires, and the probe gives `FAIL` on the vulnerable build and `PASS`
+  on the fixed one. See each case's `VERIFIED.md`.
+- The verdict engine has 42 tests, including regressions for known false-`PASS`
+  paths (empty evidence, foreign-run evidence, malformed responses). That is
+  "tested against selected cases", not "proven correct".
+- A mutation test mutates the fixture's authorization check six ways and
+  confirms no mutant that actually leaks is ever reported `PASS`. Evidence the
+  detector resists those faults, not proof it cannot be fooled.
 
-## Quick start (no install, no Docker, no network)
+## Running it
 
-The harness is pure standard library, so you do not need to install anything.
-From a fresh clone, with Python 3.10+:
+**The mock demo** (above) needs nothing. For the two paths below:
 
-```
-make demo        # in-process FAIL/PASS demo
-make test        # the full test suite
-```
-
-That is the whole first look. `make demo` runs the vulnerable and fixed cases
-in-process and prints FAIL then PASS. Nothing is downloaded, nothing is exposed.
-
-## Optional: the `range` command
-
-If you want `range` as a command instead of `make`/`python3`:
+**Reproduce a real CVE (needs Docker).** Each case ships a one-command verifier
+that builds both versions, reproduces the bug, checks the verdicts, and tears
+everything down:
 
 ```
-make install     # editable install (pip install -e .)
-range list
-range run mcphub-idor-CVE-2026-79750 --version vulnerable --mock
+make verify-mcphub           # cross-tenant read: VULN-1.0.29 FAIL, FIXED-1.0.30 PASS
+make verify-mcphub-privesc   # privilege escalation: VULN-1.0.28 FAIL, FIXED-1.0.29 PASS
 ```
 
-If your shell says `range: command not found` after installing, pip put it in
-your user bin dir; add it to PATH (`export PATH="$HOME/.local/bin:$PATH"`) or
-use `pipx install .`. You never need the command: `python3 harness/cli.py ...`
-and the `make` targets work without it.
+The first build is slow (it compiles the target server). Run it in an isolated
+lab; it builds deliberately vulnerable software. See each case's safety notes.
 
-## Run against a real target
-
-```
-range list                                    # show cases
-range run <case> --version vulnerable         # expect FAIL
-range run <case> --version fixed              # expect PASS
-range run <case> --json out.json              # machine-readable evidence
-```
-
-`range` finds cases under ./cases when run from a clone; set RANGE_CASES_DIR to
-point it elsewhere.
-
-## Reproduce a real CVE end to end (needs Docker)
-
-Each case ships a one-command verifier that builds the vulnerable and fixed
-versions, reproduces the bug, and tears everything down:
-
-```
-make verify-mcphub
-# expect: VERDICT VULN-1.0.29 FAIL, VERDICT FIXED-1.0.30 PASS
-```
-
-The underlying authorization result is verified (see the case's VERIFIED.md).
-The one-command container wrapper (verify.sh) is the convenience path and should
-be run on a Docker host in an isolated lab; see the case's safety notes.
-
-## Test your own server
-
-Point the same cross-tenant test at an MCP server you run: copy
-`templates/byos_adapter.py`, fill in four TODOs, and run it. See
+**Test your own server (no Docker).** Point the same cross-tenant test at an MCP
+server you run: copy `templates/byos_adapter.py`, fill in four TODOs, and run
+`range run my-server --adapter ./my_adapter.py`. See
 [docs/BRING-YOUR-OWN-SERVER.md](docs/BRING-YOUR-OWN-SERVER.md).
+
+### The `range` command (optional)
+
+`make` and `python3 harness/cli.py` work without installing anything. If you
+want `range` on your PATH: `make install` (editable install). If your shell then
+says `range: command not found`, pip put it in your user bin dir; add that to
+PATH or use `pipx install .`.
 
 ## Contributing a case
 
 New MCP authorization CVE? That's a pull request. See
-[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). One folder per case, pinned
+[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): one folder per case, pinned
 versions, a positive control, and the expected verdict both ways.
 
-## Testing other people's servers
+## Safety
 
-Only servers you host yourself, in your own tenants. See
-[docs/DISCLOSURE.md](docs/DISCLOSURE.md) before you point this at anything.
+This runs deliberately vulnerable software and performs actions that should be
+blocked. Run it in an isolated lab, and test only servers you host yourself with
+throwaway tenants and synthetic data. See [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
 
 ## License
 
-MIT. The engine underneath is [Ordeal]; this range is its public front door.
-
-[Ordeal]: https://github.com/bogdanticu88
+MIT. Built on Ordeal, the author's agent-authorization enforcement engine.
