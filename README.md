@@ -2,15 +2,19 @@
 
 **Your authorization tests pass. The agent's path doesn't.**
 
-A range of real, published MCP authorization bugs, each one runnable on your
-laptop. No account, no signup, no telemetry. It runs with no network once set
-up; note that the first build does download dependencies and the target
-software, so "offline" means at run time, not at install time.
+A range of real, published MCP authorization CVEs, each one runnable on your
+laptop. No account, no signup, no telemetry.
 
-Every case is a real CVE pinned at its vulnerable and its fixed version. The
-same probe runs against both, and the harness prints `FAIL` on the vulnerable
-one and `PASS` on the patched one, by looking at what actually leaked, not at
-what the server claimed it did.
+Two cases today, covering two different bug classes: cross-tenant read
+(CVE-2026-79750) and privilege escalation (CVE-2026-79744). Each is pinned at
+its vulnerable and fixed version and reproduced end to end.
+
+(Offline at run time; the first build does download dependencies and the target
+software.)
+
+The same probe runs against both versions, and the harness prints `FAIL` on the
+vulnerable one and `PASS` on the patched one, judged by what actually happened
+(a leaked canary, a config change that landed), not by what the server claimed.
 
 ```
 $ range run mcphub-idor-CVE-2026-79750 --version vulnerable
