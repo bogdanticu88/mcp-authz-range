@@ -139,14 +139,23 @@ def cmd_run(args) -> int:
             return EXIT_CRASH
         a, b = _load_adapter_sessions(adapter_path)
 
-    result = run_t1(
-        run_id="run1", attempt_id="a1",
-        tenant_a=a, tenant_b=b,
-        seed_tool="seed", read_tool="read", record_id_field="id",
-    )
+    # Which contract to run: the case's `test` field, or --test, default T1.
+    test = (args.test or (cases.get(args.case, {}).get("test") if not byo else None) or "T1").upper()
+    if test == "T4":
+        from t4_privilege import run_t4
+        # sessions() returns (primary, secondary); for T4 primary is the
+        # non-admin attacker, secondary is the admin authority/control.
+        result = run_t4(run_id="run1", attacker=a, admin=b)
+    else:
+        result = run_t1(
+            run_id="run1", attempt_id="a1",
+            tenant_a=a, tenant_b=b,
+            seed_tool="seed", read_tool="read", record_id_field="id",
+        )
     verdict, reason = evaluate(result)
 
-    label = {"T1": "cross-tenant read"}.get(result.test_id, result.test_id)
+    label = {"T1": "cross-tenant read",
+             "T4": "privilege escalation"}.get(result.test_id, result.test_id)
     print(f"{result.test_id} {label:20} {verdict.value:5}  {reason}")
 
     if args.json:
@@ -177,6 +186,7 @@ def main(argv=None) -> int:
     r.add_argument("--json", metavar="PATH", help="write evidence JSON")
     r.add_argument("--mock", action="store_true", help="in-process mock server (no Docker)")
     r.add_argument("--adapter", metavar="PATH", help="case adapter.py exposing sessions()")
+    r.add_argument("--test", choices=["T1", "T4", "t1", "t4"], help="override which contract to run")
     r.set_defaults(func=cmd_run)
 
     args = p.parse_args(argv)

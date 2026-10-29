@@ -46,6 +46,7 @@ class State:
         self.counter = 0
         self.effects: dict[str, int] = {}     # approval_id -> times applied
         self.consumed: set[str] = set()        # approvals already used once
+        self.config: dict = {}                 # system config (for T4 privilege tests)
         self.lock = threading.Lock()
 
     def oracle(self, event: dict):
@@ -159,6 +160,25 @@ class Handler(BaseHTTPRequestHandler):
             st.oracle({"effect": "apply", "approval": approval,
                        "count": count, "replay": replay})
             return self._send(200, {"applied": True, "count": count})
+
+        if tool == "write_config":
+            # Privileged config change. In the fixed/protected server only an
+            # admin may do this; the privesc_vuln mode drops that check, so any
+            # authenticated tenant can change global config (CVE-2026-79744 shape).
+            is_admin = (tenant == "admin")
+            allowed = is_admin or st.mode == "privesc_vuln"
+            if not allowed:
+                return self._send(200, {"decision": "denied", "applied": False})
+            with st.lock:
+                st.config[args.get("key", "")] = args.get("value")
+            st.oracle({"effect": "config_write", "by": tenant,
+                       "key": args.get("key"), "value": args.get("value"),
+                       "is_admin": is_admin})
+            return self._send(200, {"applied": True})
+
+        if tool == "read_config":
+            # Authoritative read of current config (used to observe the effect).
+            return self._send(200, {"config": st.config})
 
         return self._send(404, {"error": "unknown tool"})
 
