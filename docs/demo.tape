@@ -16,7 +16,7 @@ Set Theme "Dracula"
 # Hidden setup: run from repo root, expose `range` without needing it on PATH.
 Hide
 Type "cd $(git rev-parse --show-toplevel 2>/dev/null || pwd)" Enter
-Type "range() { python3 harness/cli.py \"$@\"; }" Enter
+Type "alias range='python3 harness/cli.py'" Enter
 Type "clear" Enter
 Show
 
