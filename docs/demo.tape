@@ -22,7 +22,7 @@ Show
 
 Type "# your authorization tests pass. the agent's path doesn't." Enter
 Sleep 1s
-Type "range run mcphub-idor-CVE-2026-79750 --version vulnerable" Sleep 600ms Enter
+Type "range run mcphub-idor-CVE-2026-79750 --version vulnerable --mock" Sleep 600ms Enter
 Sleep 2s
-Type "range run mcphub-idor-CVE-2026-79750 --version fixed" Sleep 600ms Enter
+Type "range run mcphub-idor-CVE-2026-79750 --version fixed --mock" Sleep 600ms Enter
 Sleep 3500ms
