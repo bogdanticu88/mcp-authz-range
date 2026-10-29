@@ -53,6 +53,24 @@ test with a trustworthy verdict beats a broad one you can't rely on.
 A `PASS` is a bounded statement about the path, tenants, and record you tested.
 It is not a proof that your server is secure everywhere. The report says so.
 
+
+## Test for privilege escalation instead
+
+The steps above test cross-tenant read (T1). To test whether a non-admin can
+perform an admin-only action (T4, the privilege-escalation class), use the other
+template:
+
+```
+cp templates/byos_privesc_adapter.py ./my_privesc_adapter.py
+# fill in: admin + non-admin tokens, auth header, one admin-only config write,
+# and how to read that field back.
+range run my-server --adapter ./my_privesc_adapter.py --test T4 --version vulnerable
+```
+
+Same verdict rules: FAIL means the non-admin's privileged change took effect,
+PASS means they were denied and the admin control fired, ERROR means the setup
+could not be trusted.
+
 ## Safety
 
 Test only a server you are authorized to test, with throwaway tenants and

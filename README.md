@@ -102,10 +102,10 @@ make verify-mcphub-privesc   # privilege escalation: VULN-1.0.28 FAIL, FIXED-1.0
 The first build is slow (it compiles the target server). Run it in an isolated
 lab; it builds deliberately vulnerable software. See each case's safety notes.
 
-**Test your own server (no Docker).** Point the same cross-tenant test at an MCP
-server you run: copy `templates/byos_adapter.py`, fill in four TODOs, and run
-`range run my-server --adapter ./my_adapter.py`. See
-[docs/BRING-YOUR-OWN-SERVER.md](docs/BRING-YOUR-OWN-SERVER.md).
+**Test your own server (no Docker).** Point the same tests at an MCP server you
+run. Two templates to copy and fill in: `templates/byos_adapter.py` for the
+cross-tenant read, and `templates/byos_privesc_adapter.py` for privilege
+escalation. See [docs/BRING-YOUR-OWN-SERVER.md](docs/BRING-YOUR-OWN-SERVER.md).
 
 ### The `range` command (optional)
 
