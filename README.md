@@ -2,6 +2,8 @@
 
 **Your authorization tests pass. The agent's path doesn't.**
 
+![demo: same command, one word different — FAIL on the vulnerable version, PASS on the patched one](docs/demo.gif)
+
 A range of real, published MCP authorization CVEs, each one runnable on your
 laptop. No account, no signup, no telemetry.
 

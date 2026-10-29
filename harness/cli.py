@@ -17,6 +17,16 @@ import sys
 from verdict import Verdict, evaluate, run_exit_code, EXIT_CRASH
 from t1_cross_tenant import run_t1, TenantSession
 
+
+def _color(verdict: str) -> str:
+    """Red FAIL / green PASS / yellow ERROR, but only on a real terminal, so
+    piped or captured output (tests, CI, grep) stays plain text."""
+    if not sys.stdout.isatty():
+        return verdict
+    codes = {"FAIL": "31", "PASS": "32", "ERROR": "33", "INCONCLUSIVE": "33"}
+    c = codes.get(verdict)
+    return f"\033[1;{c}m{verdict}\033[0m" if c else verdict
+
 def _find_cases_dir() -> str:
     """Locate the cases/ directory, in priority order:
       1. $RANGE_CASES_DIR if set (explicit override),
@@ -156,7 +166,9 @@ def cmd_run(args) -> int:
 
     label = {"T1": "cross-tenant read",
              "T4": "privilege escalation"}.get(result.test_id, result.test_id)
-    print(f"{result.test_id} {label:20} {verdict.value:5}  {reason}")
+    v = verdict.value
+    pad = " " * max(0, 5 - len(v))
+    print(f"{result.test_id} {label:20} {_color(v)}{pad}  {reason}")
 
     if args.json:
         with open(args.json, "w") as f:

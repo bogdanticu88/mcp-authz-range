@@ -1,5 +1,5 @@
 # mcp-authz-range: common tasks, one command each.
-.PHONY: help test demo install clean verify-mcphub verify-mcphub-privesc
+.PHONY: help test demo install clean verify-mcphub verify-mcphub-privesc gif
 
 help:
 	@echo "make test           run the harness test suite (no Docker, no network)"
@@ -28,3 +28,6 @@ verify-mcphub-privesc:
 clean:
 	rm -rf **/__pycache__ **/.pytest_cache .pytest_cache *.egg-info
 	rm -rf mcphub-build mcphub-fixed
+
+gif:
+	vhs docs/demo.tape

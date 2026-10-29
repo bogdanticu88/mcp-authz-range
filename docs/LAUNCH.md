@@ -70,3 +70,12 @@ run yourself, using the same harness. Disclose anything you find properly (see
 DISCLOSURE.md), wait for fixes, then publish the findings as a second post. That
 post, "I found N of these in the wild", is a stronger story than the launch, and
 a better talk abstract.
+
+## Making the GIF
+
+Preferred: `make gif` (needs `brew install vhs`). It renders
+`docs/demo.gif` from `docs/demo.tape`, clean and reproducible.
+
+No vhs? Record by hand: Cmd+Shift+5 on macOS, capture the terminal while
+you run the two --mock commands, save the .mov, and convert to GIF (the
+Gifski app, or `ffmpeg -i in.mov -vf "fps=12,scale=1100:-1" demo.gif`).
